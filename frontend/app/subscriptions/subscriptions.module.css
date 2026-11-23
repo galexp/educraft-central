@@ -1,0 +1,37 @@
+.plans { margin-top: 20px; }
+.plans h2 { margin: 0 0 16px; font-size: 1.15rem; letter-spacing: -.035em; }
+
+.planList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 265px), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.module {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid #e9e3ef;
+  border-radius: 16px;
+  background: linear-gradient(155deg, #f7efff, #fff 45%);
+  overflow-wrap: anywhere;
+}
+
+.module h3, .price { margin: 0; }
+.price strong { font-size: 1.3rem; color: #542082; }
+.price span { color: #645871; font-size: .83rem; }
+.features { display: grid; gap: 7px; margin: 0 0 8px; padding-left: 18px; color: #51465f; font-size: .875rem; line-height: 1.45; }
+.features li::marker { color: #7334af; }
+.planForm { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin-top: auto; padding-top: 14px; border-top: 1px solid #e9e3ef; }
+.planForm label { flex: 1 1 100px; min-width: 0; }
+.planForm button { justify-content: center; min-height: 42px !important; }
+.planForm small { width: 100%; }
+.planForm [role="alert"] { color: #aa2630; }
+
+@media (max-width: 650px) {
+  .planForm button { flex-grow: 1; }
+}

@@ -1,0 +1,66 @@
+name: Deploy central to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: central-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          command_timeout: 20m
+          script_stop: true
+          script: |
+            set -Eeuo pipefail
+
+            APP_DIR="${{ secrets.VPS_APP_DIR || '/opt/educraft360-central' }}"
+            cd "$APP_DIR"
+
+            previous_commit="$(git rev-parse HEAD 2>/dev/null || true)"
+            trap 'status=$?; if [ "$status" -ne 0 ] && [ -n "${previous_commit:-}" ]; then echo "Deployment failed; restoring code ${previous_commit}"; git reset --hard "$previous_commit"; docker compose up -d --build api web || true; fi; exit "$status"' EXIT
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            release_commit="$(git rev-parse HEAD)"
+
+            echo "Deploying ${release_commit} (previous: ${previous_commit:-none})"
+
+            # Build and start the application containers. PostgreSQL and Redis
+            # data live in named Docker volumes and are not removed by this.
+            docker compose up -d --build db redis api web
+
+            # Apply committed SQL migrations after the database is healthy.
+            docker compose run --rm api migrate
+
+            # Verify the public-facing web container and internal API proxy.
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent --show-error http://127.0.0.1:3000/api/health >/dev/null; then
+                echo "Health check passed"
+                break
+              fi
+              if [ "$attempt" = 30 ]; then
+                echo "Health check failed"
+                docker compose ps
+                docker compose logs --tail=100 web api
+                exit 1
+              fi
+              sleep 2
+            done
+
+            printf '%s\n' "$release_commit" > .deployed-commit
+            echo "Deployment complete: $release_commit"
+

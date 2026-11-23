@@ -1,0 +1,155 @@
+.dashboard {
+  display: grid;
+  gap: 22px;
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 190px;
+  padding: clamp(24px, 4vw, 43px);
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 86% 20%, #813abe, transparent 62%), linear-gradient(110deg, #281044, #4b167c);
+  color: #fff;
+}
+
+.heroArt {
+  position: absolute;
+  z-index: -1;
+  top: -112px;
+  right: 7%;
+  width: 330px;
+  aspect-ratio: 1;
+  border: 1px solid #ead1ff4a;
+  border-radius: 50%;
+  box-shadow: 0 0 0 35px #e3c8ff16, 0 0 0 72px #e3c8ff10, 0 0 0 112px #e3c8ff0b, inset 0 0 75px #e3c8ff25;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4.2vw, 3.65rem);
+  font-weight: 720;
+  line-height: 1.04;
+  letter-spacing: -.065em;
+}
+
+.hero p { margin: 13px 0 0; color: #f2e6ff; line-height: 1.5; }
+
+.heroLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 13px;
+  border: 1px solid #f4ddff6b;
+  border-radius: 10px;
+  background: #2f104986;
+  font-size: .82rem;
+  font-weight: 660;
+}
+
+.heroLink:hover { background: #27103b; }
+.heroLink:focus-visible { outline-color: #fff !important; }
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric,
+.panel {
+  background: white;
+  border: 1px solid #e9e3ef;
+  border-radius: 16px;
+  box-shadow: 0 2px 5px #31124406;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 17px 18px;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+
+.metric:hover { border-color: #c7adde; box-shadow: 0 5px 16px #4b167c12; }
+.metricTop { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+.metricArrow, .actionArrow { color: #786888; flex-shrink: 0; }
+
+.metricIcon,
+.actionIcon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+
+.purple, .actionIcon { background: #f1e8fb; color: #633192; }
+.green { background: #e4f6eb; color: #17663c; }
+.amber { background: #fdf0dd; color: #805014; }
+.blue { background: #e8efff; color: #3359a1; }
+
+.metric strong, .amount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.055em;
+  line-height: 1.1;
+}
+
+.metric strong { margin-top: 14px; font-size: clamp(1.65rem, 3.2vw, 2.3rem); }
+.metricLabel { margin-top: 4px; color: #645871; font-size: .84rem; }
+
+.lower {
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  gap: 16px;
+}
+
+.panel { padding: 22px; min-width: 0; }
+.panel h2 { margin: 0; font-size: 1.16rem; letter-spacing: -.035em; }
+.balance { background: linear-gradient(140deg, #fcf9ff, #fff 75%); }
+.balance h2 { margin-top: 15px; }
+.amount { display: block; margin-top: 12px; font-size: clamp(1.8rem, 3.9vw, 2.85rem); overflow-wrap: anywhere; }
+.balance p { margin: 8px 0 16px; color: #645871; font-size: .85rem; }
+.textLink { display: inline-flex; align-items: center; gap: 7px; color: #5b238d; font-size: .86rem; font-weight: 700; }
+.textLink:hover { text-decoration: underline; }
+
+.actions h2 { margin-bottom: 11px; }
+.action {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 7px;
+  border-radius: 9px;
+}
+
+.action:hover { background: #f8f3fc; }
+.actionIcon { width: 34px; height: 34px; }
+.action strong, .action small { display: block; }
+.action strong { font-size: .86rem; }
+.action small { margin-top: 3px; color: #645871; font-size: .78rem; }
+
+@media (max-width: 1100px) {
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .dashboard { gap: 15px; }
+  .hero { flex-direction: column; align-items: flex-start; justify-content: center; }
+  .heroArt { right: -175px; }
+  .metrics, .lower { gap: 11px; }
+  .metric { padding: 13px; }
+  .lower { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metric { transition: none; }
+}

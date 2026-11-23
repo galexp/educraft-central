@@ -1,0 +1,75 @@
+.records {
+  --records-border: #e9e3ef;
+  --records-purple: #542082;
+  min-width: 0;
+}
+
+.records > :global(.bar) {
+  margin-bottom: 22px;
+  padding: clamp(20px, 4vw, 38px);
+  border: 1px solid var(--records-border);
+  border-radius: 20px;
+  background: radial-gradient(ellipse at top right, #eee1fc, transparent 65%), #fff;
+}
+
+.records :global(.top-title) {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  letter-spacing: -.055em;
+}
+
+.records :global(.subtitle) { color: #645871; }
+
+.records :global(.btn) {
+  min-height: 42px;
+  padding-inline: 16px;
+  border-radius: 10px;
+  background: var(--records-purple);
+  white-space: nowrap;
+}
+
+.records :global(.btn):hover { background: #68299c; }
+
+.records :global(.btn.secondary) {
+  min-height: 36px;
+  padding-inline: 12px;
+  background: #f0e6fb;
+  color: var(--records-purple);
+}
+
+.records :global(.btn.secondary):hover { background: #e8d6fa; }
+
+.records :global(.panel),
+.records :global(.card) {
+  padding: clamp(14px, 2vw, 24px);
+  border-color: var(--records-border);
+  border-radius: 17px;
+}
+
+.records :global(.panel) h3 { margin-top: 0; }
+.records :global(.card) > :global(.bar) { flex-wrap: wrap; }
+.records :global(.card) > :global(.bar) input { width: min(100%, 260px); }
+.records :global(.table-wrap) { border: 1px solid var(--records-border); border-radius: 12px; }
+.records :global(.data-table) th { background: #f8f4fc; color: #60516f; }
+.records :global(.data-table) td:nth-child(2) { font-weight: 650; }
+.records :global(.data-table) tbody tr:hover { background: #fcf9ff; }
+.records :global(.data-table) tbody tr:last-child td { border-bottom: 0; }
+.records :global(.data-table) :global(.badge) { text-transform: capitalize; }
+
+.records :global(.data-table) select {
+  padding: 7px 9px;
+  border: 1px solid var(--records-border);
+  border-radius: 8px;
+  background: #fff;
+  color: #51465f;
+  text-transform: capitalize;
+}
+
+.records :is(input, select, textarea):focus-visible {
+  outline: 2px solid #7334af;
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .records > :global(.bar) { align-items: flex-start; flex-direction: column; }
+  .records :global(.card) > :global(.bar) input { width: 100%; }
+}
