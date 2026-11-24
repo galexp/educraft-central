@@ -252,6 +252,37 @@ DELETE /school-instance-credentials/{credential_id}
 
 To rotate a credential, create a new invitation for the school, verify and consume it from the same/new instance, switch the school instance to the new token, then revoke the old `credential_id`.
 
+### Lost consume response / credential recovery
+
+If Central consumed an invitation but the HTTP response containing the one-time token was lost, do not consume the invitation again. An owner or admin can issue a replacement for the already-bound instance:
+
+```http
+POST /school-instance-credentials/rotate
+```
+
+Request (central operator session required):
+
+```json
+{"school_id":"school-uuid","instance_id":"stable-school-instance-id"}
+```
+
+Response (`200`):
+
+```json
+{
+  "rotated":true,
+  "credential_id":"replacement-credential-uuid",
+  "school_id":"school-uuid",
+  "instance_id":"stable-school-instance-id",
+  "api_token":"REPLACEMENT_TOKEN_RETURNED_ONCE",
+  "api_token_expires_at":"2027-11-24T12:00:00Z"
+}
+```
+
+This revokes all currently active credentials for that school/instance before issuing the replacement. The raw replacement token is returned once and is stored only as a hash by Central. A school administrator should confirm the instance identity through the Central operator before a rotation is performed.
+
+**Secure delivery and storage:** Central does not email or push the replacement token automatically. The Central owner/admin retrieves it over the authenticated HTTPS dashboard/API response and transfers it to the already-installed school through an administrator-approved secure channel (for example, the VPS secret manager or an encrypted server-to-server provisioning channel). It must be written only to the school server’s encrypted environment/secret store, never to browser local storage, source control, logs, chat, or a database field readable by school users. After saving it, the school instance uses it as `Authorization: Bearer ...` and the operator should close the recovery response and rotate again if the token may have been exposed.
+
 ## 6. Plans, subscriptions and term activation
 
 ### Plans
@@ -351,6 +382,7 @@ Errors:
 | 400 | `{"error":"school_id, activation_code and instance_id are required"}` |
 | 401 | `{"error":"invalid activation code"}` |
 | 409 | `{"error":"activation has expired"}` |
+| 409 | `{"error":"subscription is inactive"}` |
 | 500 | `{"error":"features unavailable"}` |
 
 The activation endpoint is currently a public code-verification endpoint protected by the activation code and school ID; it is not a general runtime subscription API. There are currently no expiry/refresh tokens. The school instance should verify the term code when installing or starting a term and cache the returned feature keys until the term expires.
@@ -536,7 +568,21 @@ RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL=EduCraft360 <noreply@example.com>
 ```
 
-## 11. Local development
+## 11. Availability, caching and expiry policy
+
+Central is authoritative while reachable over HTTPS. The school instance should cache the last successful subscription/feature response and its `ends_on` date.
+
+- Recommended offline grace period: **72 hours** after the last successful Central check.
+- During that grace period, the school may continue using the cached feature set, while marking the Central connection as unavailable.
+- After 72 hours without a successful check, the school should stop privileged subscription-backed actions and show an administrator reconnection message. Local data access and emergency read-only access are a school-instance decision.
+- When a subscription reaches `ends_on`, or Central returns an explicit cancellation/revocation/no-active-plans response, the school must disable subscription-backed modules **immediately**. The 72-hour grace period applies only when Central cannot be reached and the school is operating on its last known cached response; it does not apply to a successful Central response that says access has ended.
+- Revoking a credential takes effect on the next Central request; cached access can continue only within the 72-hour offline grace period.
+- A plan change is reflected the next time `/school/subscription` succeeds. The school should replace its cached feature set rather than merge old and new keys.
+- A term activation is valid through its `ends_on` date. If its subscription is cancelled or revoked, the next entitlement check should remove its module access; the school must not treat an old activation code as a permanent licence.
+
+These rules are the integration contract for the school project. They should be covered by outage and expiry tests.
+
+## 12. Local development
 
 ```bash
 cd backend
@@ -548,4 +594,22 @@ go run ./cmd/api
 ```
 
 The frontend normally proxies `/api/*` to the API. Use that proxy from browser code rather than hard-coding the API origin.
+
+## 13. Integration test checklist
+
+Run this against a disposable database and a test school:
+
+1. Create a school and confirm its ID/code are unique.
+2. Create an invitation and verify its `install_url`, expiry, and one-time status.
+3. Verify it from the intended `instance_id`; confirm the response contains `school_id`, `school_code`, and `expires_at`.
+4. Verify it from a different instance; expect `409 invitation is bound to another instance`.
+5. Consume it; save the returned credential immediately and call `/school/subscription`.
+6. Repeat consume; expect `409 invitation is unavailable` and no second credential.
+7. Simulate a lost consume response; use the owner/admin rotate endpoint and confirm the old token returns `401` while the replacement works.
+8. Create a subscription with multiple plans; confirm all expected module keys, including `cbt_exams`, are returned.
+9. Verify a term activation; confirm school, term dates, and features.
+10. Change or cancel the subscription; confirm the next entitlement response reflects the change and activation verification rejects inactive subscriptions.
+11. Create, list, read, and reply to a school ticket; confirm another school credential receives no access.
+12. Revoke a credential; confirm subsequent calls return `401`.
+13. Advance/override expiry dates and test invitation expiry, credential expiry, term expiry, and the 72-hour offline policy in the school instance.
 

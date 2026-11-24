@@ -977,14 +977,18 @@ func (s *Server) verifyActivation(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "school_id, activation_code and instance_id are required")
 		return
 	}
-	var activationID, subscriptionID, termName, startsOn, endsOn, status string
-	e := s.db.QueryRow(r.Context(), `SELECT id::text,subscription_id::text,term_name,starts_on::text,ends_on::text,status FROM term_activations WHERE school_id=$1 AND activation_code_hash=$2`, x.SchoolID, digest(x.ActivationCode)).Scan(&activationID, &subscriptionID, &termName, &startsOn, &endsOn, &status)
+	var activationID, subscriptionID, termName, startsOn, endsOn, status, subscriptionStatus string
+	e := s.db.QueryRow(r.Context(), `SELECT a.id::text,a.subscription_id::text,a.term_name,a.starts_on::text,a.ends_on::text,a.status,s.status FROM term_activations a JOIN subscriptions s ON s.id=a.subscription_id WHERE a.school_id=$1 AND a.activation_code_hash=$2`, x.SchoolID, digest(x.ActivationCode)).Scan(&activationID, &subscriptionID, &termName, &startsOn, &endsOn, &status, &subscriptionStatus)
 	if e != nil || status == "revoked" {
 		fail(w, 401, "invalid activation code")
 		return
 	}
 	if status == "expired" || endsOn < time.Now().Format("2006-01-02") {
 		fail(w, 409, "activation has expired")
+		return
+	}
+	if subscriptionStatus != "active" && subscriptionStatus != "trial" {
+		fail(w, 409, "subscription is inactive")
 		return
 	}
 	_, _ = s.db.Exec(r.Context(), "UPDATE term_activations SET status='active',activated_at=COALESCE(activated_at,NOW()) WHERE id=$1", activationID)
@@ -1318,6 +1322,26 @@ func (s *Server) revokeSchoolCredential(w http.ResponseWriter, r *http.Request) 
 	s.audit(r.Context(), actor(r), "school.credential_revoked", "school_instance_credential", credentialID)
 	reply(w, 200, map[string]any{"revoked": true, "id": credentialID})
 }
+func (s *Server) rotateSchoolCredential(w http.ResponseWriter, r *http.Request) {
+	var x struct{ SchoolID, InstanceID string }
+	if body(r, &x) != nil || !textOK(x.SchoolID, 80) || !textOK(x.InstanceID, 160) {
+		fail(w, 400, "school_id and instance_id required")
+		return
+	}
+	if _, e := s.db.Exec(r.Context(), "UPDATE school_instance_credentials SET revoked_at=COALESCE(revoked_at,NOW()) WHERE school_id=$1 AND instance_id=$2 AND revoked_at IS NULL", x.SchoolID, x.InstanceID); e != nil {
+		fail(w, 500, "credential rotation unavailable")
+		return
+	}
+	apiToken := token()
+	credentialID := id()
+	expires := time.Now().AddDate(1, 0, 0)
+	if _, e := s.db.Exec(r.Context(), "INSERT INTO school_instance_credentials(id,school_id,instance_id,token_hash,expires_at) VALUES($1,$2,$3,$4,$5)", credentialID, x.SchoolID, x.InstanceID, digest(apiToken), expires); e != nil {
+		fail(w, 500, "replacement credential could not be issued")
+		return
+	}
+	s.audit(r.Context(), actor(r), "school.credential_rotated", "school_instance_credential", credentialID)
+	reply(w, 200, map[string]any{"rotated": true, "credential_id": credentialID, "school_id": x.SchoolID, "instance_id": x.InstanceID, "api_token": apiToken, "api_token_expires_at": expires})
+}
 func (s *Server) recordPayment(w http.ResponseWriter, r *http.Request) {
 	var x struct {
 		InvoiceID     string `json:"invoice_id"`
@@ -1649,6 +1673,7 @@ func main() {
 	mux.HandleFunc("GET /school/tickets/{id}", s.schoolGuard(s.schoolTicketDetail))
 	mux.HandleFunc("POST /school/tickets/{id}/replies", s.schoolGuard(s.schoolTicketReply))
 	mux.HandleFunc("DELETE /school-instance-credentials/{id}", s.origin(s.guard(s.revokeSchoolCredential, "owner", "admin")))
+	mux.HandleFunc("POST /school-instance-credentials/rotate", s.origin(s.guard(s.rotateSchoolCredential, "owner", "admin")))
 	mux.HandleFunc("DELETE /installation-invitations/{id}", s.origin(s.guard(s.revokeInvitation, "owner", "admin")))
 	for _, kind := range []string{"schools", "plans", "subscriptions", "invoices", "tickets", "operators"} {
 		k := kind
