@@ -1621,6 +1621,25 @@ func seed(db *pgxpool.Pool) error {
 	_, err = db.Exec(context.Background(), "INSERT INTO operators(id,name,email,password_hash,role) VALUES($1,$2,$3,$4,'owner')", id(), name, email, string(hash))
 	return err
 }
+func resetBootstrapPassword(db *pgxpool.Pool) error {
+	email := strings.ToLower(strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL")))
+	pw := os.Getenv("BOOTSTRAP_ADMIN_PASSWORD")
+	if !strings.Contains(email, "@") || len(pw) < 12 {
+		return errors.New("set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD (12+ characters)")
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	tag, err := db.Exec(context.Background(), "UPDATE operators SET password_hash=$1,active=TRUE WHERE email=$2", string(hash), email)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return errors.New("operator email not found")
+	}
+	return nil
+}
 func main() {
 	ctx := context.Background()
 	dsn := os.Getenv("DATABASE_URL")
@@ -1641,6 +1660,8 @@ func main() {
 			e = migrate(db)
 		case "bootstrap":
 			e = seed(db)
+		case "reset-password":
+			e = resetBootstrapPassword(db)
 		default:
 			e = fmt.Errorf("unknown command %s", os.Args[1])
 		}
