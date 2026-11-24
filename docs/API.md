@@ -143,6 +143,14 @@ Create body:
 
 The create response includes `id`, `school_id`, `expires_at`, and `install_url`.
 
+The generated install URL contains both the instance ID and invitation token in its fragment:
+
+```text
+https://school.example.com/install#instance_id=inst-example&invitation=SIGNED_TOKEN
+```
+
+The create response also includes the generated `instance_id`. The school installer must read both fragment values and send them to Central during verification.
+
 ### Verify from a school instance
 
 ```http
@@ -180,6 +188,7 @@ Consumption is one-time.
   "school_id": "school-uuid",
   "school_name": "Demo School",
   "school_code": "DEMO-116044",
+  "instance_id": "inst-example",
   "expires_at": "2026-11-23T01:15:00Z"
 }
 ```

@@ -152,7 +152,7 @@ func validInvitationToken(raw, key string) (string, string, time.Time, bool) {
 	expiresAt := time.Unix(seconds, 0)
 	return parts[0], parts[1], expiresAt, true
 }
-func schoolInstallURL(domain, rawToken string) (string, bool) {
+func schoolInstallURL(domain, rawToken, instanceID string) (string, bool) {
 	domain = strings.TrimSpace(domain)
 	if domain == "" {
 		return "", false
@@ -165,7 +165,7 @@ func schoolInstallURL(domain, rawToken string) (string, bool) {
 		return "", false
 	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/install"
-	parsed.Fragment = "invitation=" + rawToken
+	parsed.Fragment = "instance_id=" + url.QueryEscape(instanceID) + "&invitation=" + url.QueryEscape(rawToken)
 	return parsed.String(), true
 }
 func reply(w http.ResponseWriter, status int, v any) {
@@ -483,6 +483,7 @@ func (s *Server) createInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	invitationID := id()
+	instanceID := "inst-" + token()[:24]
 	expiresAt := time.Now().Add(time.Duration(x.ExpiresInHours) * time.Hour)
 	rawToken := invitationToken(invitationID, x.SchoolID, expiresAt, s.invitationKey)
 	ciphertext, e := encryptInvitation(rawToken, s.invitationKey)
@@ -490,23 +491,23 @@ func (s *Server) createInvitation(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "invitation could not be created")
 		return
 	}
-	_, e = s.db.Exec(r.Context(), `INSERT INTO installation_invitations(id,school_id,token_hash,token_ciphertext,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6)`, invitationID, x.SchoolID, digest(rawToken), ciphertext, expiresAt, actor(r).ID)
+	_, e = s.db.Exec(r.Context(), `INSERT INTO installation_invitations(id,school_id,instance_id,token_hash,token_ciphertext,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6,$7)`, invitationID, x.SchoolID, instanceID, digest(rawToken), ciphertext, expiresAt, actor(r).ID)
 	if e != nil {
 		fail(w, 500, "invitation could not be created")
 		return
 	}
 	s.audit(r.Context(), actor(r), "installation_invitation.created", "school", x.SchoolID)
-	installURL, validDomain := schoolInstallURL(schoolDomain, rawToken)
+	installURL, validDomain := schoolInstallURL(schoolDomain, rawToken, instanceID)
 	if !validDomain {
 		fail(w, 400, "school domain must be a valid hostname or URL")
 		return
 	}
-	reply(w, 201, map[string]any{"id": invitationID, "school_id": x.SchoolID, "school_name": schoolName, "school_code": schoolCode, "expires_at": expiresAt, "token": rawToken, "install_url": installURL})
+	reply(w, 201, map[string]any{"id": invitationID, "school_id": x.SchoolID, "school_name": schoolName, "school_code": schoolCode, "instance_id": instanceID, "expires_at": expiresAt, "token": rawToken, "install_url": installURL})
 }
 func (s *Server) invitationLink(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
-	var ciphertext, status, domain string
-	if e := s.db.QueryRow(r.Context(), `SELECT i.token_ciphertext,i.status,sc.domain FROM installation_invitations i JOIN schools sc ON sc.id=i.school_id WHERE i.id=$1`, id).Scan(&ciphertext, &status, &domain); e != nil {
+	var ciphertext, status, domain, instanceID string
+	if e := s.db.QueryRow(r.Context(), `SELECT i.token_ciphertext,i.status,sc.domain,i.instance_id FROM installation_invitations i JOIN schools sc ON sc.id=i.school_id WHERE i.id=$1`, id).Scan(&ciphertext, &status, &domain, &instanceID); e != nil {
 		fail(w, 404, "invitation not found")
 		return
 	}
@@ -519,7 +520,7 @@ func (s *Server) invitationLink(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "invitation link unavailable")
 		return
 	}
-	installURL, valid := schoolInstallURL(domain, token)
+	installURL, valid := schoolInstallURL(domain, token, instanceID)
 	if !valid {
 		fail(w, 500, "school domain is invalid")
 		return
@@ -528,8 +529,8 @@ func (s *Server) invitationLink(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) emailInvitation(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
-	var ciphertext, status, domain, email, schoolName string
-	if e := s.db.QueryRow(r.Context(), `SELECT i.token_ciphertext,i.status,sc.domain,sc.contact_email,sc.name FROM installation_invitations i JOIN schools sc ON sc.id=i.school_id WHERE i.id=$1`, id).Scan(&ciphertext, &status, &domain, &email, &schoolName); e != nil {
+	var ciphertext, status, domain, email, schoolName, instanceID string
+	if e := s.db.QueryRow(r.Context(), `SELECT i.token_ciphertext,i.status,sc.domain,sc.contact_email,sc.name,i.instance_id FROM installation_invitations i JOIN schools sc ON sc.id=i.school_id WHERE i.id=$1`, id).Scan(&ciphertext, &status, &domain, &email, &schoolName, &instanceID); e != nil {
 		fail(w, 404, "invitation not found")
 		return
 	}
@@ -542,7 +543,7 @@ func (s *Server) emailInvitation(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "invitation link unavailable")
 		return
 	}
-	installURL, valid := schoolInstallURL(domain, token)
+	installURL, valid := schoolInstallURL(domain, token, instanceID)
 	if !valid || strings.TrimSpace(email) == "" {
 		fail(w, 400, "school email or domain is unavailable")
 		return
