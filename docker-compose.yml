@@ -1,3 +1,4 @@
+
 services:
   db:
     image: postgres:17-alpine
@@ -13,11 +14,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server","--save","60","1","--appendonly","yes"]
-    volumes: [redisdata:/data]
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+
   api:
     build: ./backend
     restart: unless-stopped
@@ -32,14 +36,27 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Platform Owner}
     depends_on:
-      db: {condition: service_healthy}
+      db:
+        condition: service_healthy
+
   web:
     build: ./frontend
     restart: unless-stopped
     environment:
       API_INTERNAL_URL: http://api:8080
-    ports: ["127.0.0.1:3000:3000"]
-    depends_on: [api]
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - api
+    networks:
+      - default
+      - nginx_shared
+
 volumes:
   pgdata:
   redisdata:
+
+networks:
+  nginx_shared:
+    external: true
+    name: educraft-docker_app-network
