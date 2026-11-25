@@ -6,9 +6,9 @@ import { api, post, patch, Row, str, money } from '@/lib/api';
 export type Field = { name: string; label: string; type?: 'text' | 'email' | 'date' | 'number' | 'textarea' | 'password' | 'select'; required?: boolean; multiple?: boolean; options?: { value: string; label: string }[]; defaultValue?: string };
 export type Col = { key: string; label: string; format?: 'money' | 'status' | 'date' | 'datetime' };
 
-type CrudProps = { title: string; subtitle: string; path: string; cols: Col[]; fields: Field[]; canCreate?: boolean; editable?: boolean; hideHeader?: boolean; afterCreate?: (row: Row, reload: () => void) => React.ReactNode };
+type CrudProps = { title: string; subtitle: string; path: string; cols: Col[]; fields: Field[]; editFields?: Field[]; canCreate?: boolean; editable?: boolean; hideHeader?: boolean; afterCreate?: (row: Row, reload: () => void) => React.ReactNode };
 
-export function Crud({ title, subtitle, path, cols, fields, canCreate = true, editable = false, hideHeader = false, afterCreate }: CrudProps) {
+export function Crud({ title, subtitle, path, cols, fields, editFields, canCreate = true, editable = false, hideHeader = false, afterCreate }: CrudProps) {
   const [rows, setRows] = useState<Row[]>([]);
   const [show, setShow] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -41,7 +41,7 @@ export function Crud({ title, subtitle, path, cols, fields, canCreate = true, ed
     {!hideHeader && <div className="bar"><div><h1 className="top-title">{title}</h1><div className="subtitle">{subtitle}</div></div>{canCreate && <button className="btn" onClick={show ? () => setShow(false) : beginCreate}>{show ? 'Cancel' : '+ Add new'}</button>}</div>}
     {error && <div className="error">{error}</div>}{message && <div className="success">{message}</div>}
     {show && (canCreate || editing) && <form className="panel" onSubmit={save}><h3>{editing ? `Edit ${title.replace(/s$/, '')}` : `New ${title.replace(/s$/, '')}`}</h3><div className="form">
-      {fields.map(field => <label className={`field ${field.type === 'textarea' ? 'wide' : ''}`} key={field.name}>{field.label}
+      {(editing ? (editFields || fields) : fields).map(field => <label className={`field ${field.type === 'textarea' ? 'wide' : ''}`} key={field.name}>{field.label}
         {field.type === 'select' ? <select required={field.required} multiple={field.multiple} value={field.multiple ? (Array.isArray(values[field.name]) ? values[field.name] as string[] : []) : str(values[field.name] ?? field.defaultValue ?? '')} onChange={event => setValues({ ...values, [field.name]: field.multiple ? Array.from(event.target.selectedOptions, option => option.value) : event.target.value })}>{!field.multiple && <option value="">Select…</option>}{field.options?.map(option => <option value={option.value} key={option.value}>{option.label}</option>)}</select> : field.type === 'textarea' ? <textarea required={field.required} rows={4} value={str(values[field.name])} onChange={event => setValues({ ...values, [field.name]: event.target.value })} /> : <input type={field.type === 'number' ? 'number' : field.type || 'text'} min={field.type === 'number' ? '0' : undefined} step={field.type === 'number' ? '0.01' : undefined} required={field.required} value={str(values[field.name])} onChange={event => setValues({ ...values, [field.name]: event.target.value })} />}
       </label>)}
     </div><div style={{ marginTop: 18 }}><button className="btn" disabled={saving}>{saving ? 'Saving…' : editing ? 'Update record' : 'Save record'}</button></div></form>}

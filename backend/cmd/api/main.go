@@ -879,25 +879,13 @@ func (s *Server) updateSubscription(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "id and at least one plan are required")
 		return
 	}
-	if _, e := time.Parse("2006-01-02", x.StartsOn); e != nil {
-		fail(w, 400, "invalid start date")
-		return
-	}
-	var end any
-	if x.EndsOn != "" {
-		if _, e := time.Parse("2006-01-02", x.EndsOn); e != nil || x.EndsOn < x.StartsOn {
-			fail(w, 400, "invalid end date")
-			return
-		}
-		end = x.EndsOn
-	}
 	tx, e := s.db.Begin(r.Context())
 	if e != nil {
 		fail(w, 500, "subscription unavailable")
 		return
 	}
 	defer tx.Rollback(r.Context())
-	tag, e := tx.Exec(r.Context(), "UPDATE subscriptions SET plan_id=$1,starts_on=$2,ends_on=$3,status=$4 WHERE id=$5", x.PlanIDs[0], x.StartsOn, end, x.Status, x.ID)
+	tag, e := tx.Exec(r.Context(), "UPDATE subscriptions SET plan_id=$1 WHERE id=$2", x.PlanIDs[0], x.ID)
 	if e != nil || tag.RowsAffected() == 0 {
 		fail(w, 404, "subscription not found")
 		return
