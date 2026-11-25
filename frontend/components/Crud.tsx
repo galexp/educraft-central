@@ -27,6 +27,7 @@ export function Crud({ title, subtitle, path, cols, fields, editFields, canCreat
     event.preventDefault(); setSaving(true); setError('');
     try {
       const payload = { ...values };
+      if (editing && !payload.id) payload.id = payload.ID;
       for (const field of fields) {
         if (field.type === 'number') payload[field.name] = Math.round(Number(payload[field.name] || 0) * 100);
         else if (payload[field.name] === undefined && field.defaultValue !== undefined) payload[field.name] = field.defaultValue;
