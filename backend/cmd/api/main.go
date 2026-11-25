@@ -600,7 +600,7 @@ func (s *Server) verifyInvitation(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "school not found")
 		return
 	}
-	reply(w, 200, map[string]any{"valid": true, "invitation_id": invitationID, "school_id": schoolID, "school_name": schoolName, "school_code": schoolCode, "expires_at": expiresAt})
+	reply(w, 200, map[string]any{"valid": true, "invitation_id": invitationID, "school_id": schoolID, "school_name": schoolName, "school_code": schoolCode, "instance_id": x.InstanceID, "expires_at": expiresAt})
 }
 func (s *Server) consumeInvitation(w http.ResponseWriter, r *http.Request) {
 	var x struct {
