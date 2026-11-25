@@ -868,16 +868,19 @@ func (s *Server) createSubscription(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) updateSubscription(w http.ResponseWriter, r *http.Request) {
 	var x struct {
-		ID             string   `json:"id"`
-		SubscriptionID string   `json:"subscription_id"`
-		Status         string   `json:"status"`
-		StartsOn       string   `json:"starts_on"`
-		EndsOn         string   `json:"ends_on"`
-		SchoolName     string   `json:"school_name"`
-		PlanName       string   `json:"plan_name"`
-		SchoolID       string   `json:"school_id"`
-		CreatedAt      string   `json:"created_at"`
-		PlanIDs        []string `json:"plan_ids"`
+		ID               string   `json:"id"`
+		SubscriptionID   string   `json:"subscription_id"`
+		Status           string   `json:"status"`
+		StartsOn         string   `json:"starts_on"`
+		EndsOn           string   `json:"ends_on"`
+		SchoolName       string   `json:"school_name"`
+		ContactEmail     string   `json:"contact_email"`
+		PlanName         string   `json:"plan_name"`
+		SchoolID         string   `json:"school_id"`
+		CreatedAt        string   `json:"created_at"`
+		ActivationID     string   `json:"activation_id"`
+		ActivationStatus string   `json:"activation_status"`
+		PlanIDs          []string `json:"plan_ids"`
 	}
 	if body(r, &x) != nil {
 		fail(w, 400, "invalid subscription request")
