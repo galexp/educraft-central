@@ -595,6 +595,10 @@ func (s *Server) verifyInvitation(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "invitation could not be verified")
 		return
 	}
+	if _, e = s.db.Exec(r.Context(), "UPDATE schools SET status='active',updated_at=NOW() WHERE id=$1 AND status='pending'", schoolID); e != nil {
+		fail(w, 500, "school could not be activated")
+		return
+	}
 	var schoolName, schoolCode string
 	if e = s.db.QueryRow(r.Context(), "SELECT name,code FROM schools WHERE id=$1", schoolID).Scan(&schoolName, &schoolCode); e != nil {
 		fail(w, 404, "school not found")
@@ -704,6 +708,10 @@ func (s *Server) schoolStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if x.Status != "pending" && x.Status != "active" && x.Status != "suspended" && x.Status != "archived" {
 		fail(w, 400, "invalid status")
+		return
+	}
+	if x.Status == "active" {
+		fail(w, 403, "schools become active only after invitation verification")
 		return
 	}
 	tag, e := s.db.Exec(r.Context(), "UPDATE schools SET status=$1,updated_at=NOW() WHERE id=$2", x.Status, x.ID)
