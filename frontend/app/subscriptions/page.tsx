@@ -87,6 +87,7 @@ function ActivationAction({ row }: { row: Row }) {
     try { const result = await api<{ activation_code: string }>(`/term-activations/${encodeURIComponent(activationID)}/code`); setCode(result.activation_code); }
     catch (err) { setError((err as Error).message); }
   }
+  if (str(row.activation_status) === 'active') return <span className="badge active">Term activated</span>;
   return <>
     <button className="btn secondary" type="button" onClick={openActivation} disabled={busy}>Activation code</button>
     {open && <div className={shell.modalBackdrop} role="presentation" onMouseDown={() => setOpen(false)}><section className={`${shell.modal} ${shell.invitationModal}`} role="dialog" aria-modal="true" aria-labelledby="activation-title" onMouseDown={event => event.stopPropagation()}>
