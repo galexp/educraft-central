@@ -1169,10 +1169,10 @@ func (s *Server) schoolSubscription(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "school not found")
 		return
 	}
-	rows, e := s.db.Query(r.Context(), `SELECT s.id::text,s.status,s.starts_on::text,s.ends_on::text,COALESCE(p.code,''),COALESCE(p.name,''),COALESCE(f.feature_key,'')
+	rows, e := s.db.Query(r.Context(), `SELECT s.id::text,s.status,s.starts_on::text,s.ends_on::text,COALESCE(f.feature_key,''),COALESCE(p.name,''),COALESCE(f.feature_key,'')
 		FROM subscriptions s LEFT JOIN subscription_plans sp ON sp.subscription_id=s.id LEFT JOIN plans p ON p.id=sp.plan_id
 		LEFT JOIN plan_features pf ON pf.plan_id=p.id LEFT JOIN features f ON f.id=pf.feature_id
-		WHERE s.school_id=$1 AND s.status IN ('active','trial') AND s.ends_on>=CURRENT_DATE ORDER BY s.ends_on DESC`, instance.SchoolID)
+		WHERE s.school_id=$1 AND s.status IN ('active','trial') AND s.starts_on<=CURRENT_DATE AND (s.ends_on IS NULL OR s.ends_on>=CURRENT_DATE) ORDER BY s.ends_on DESC NULLS LAST`, instance.SchoolID)
 	if e != nil {
 		fail(w, 500, "subscription unavailable")
 		return
