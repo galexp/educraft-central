@@ -868,12 +868,15 @@ func (s *Server) createSubscription(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) updateSubscription(w http.ResponseWriter, r *http.Request) {
 	var x struct {
-		ID, Status, StartsOn, EndsOn string
-		SchoolName                   string   `json:"school_name"`
-		PlanName                     string   `json:"plan_name"`
-		SchoolID                     string   `json:"school_id"`
-		CreatedAt                    string   `json:"created_at"`
-		PlanIDs                      []string `json:"plan_ids"`
+		ID         string   `json:"id"`
+		Status     string   `json:"status"`
+		StartsOn   string   `json:"starts_on"`
+		EndsOn     string   `json:"ends_on"`
+		SchoolName string   `json:"school_name"`
+		PlanName   string   `json:"plan_name"`
+		SchoolID   string   `json:"school_id"`
+		CreatedAt  string   `json:"created_at"`
+		PlanIDs    []string `json:"plan_ids"`
 	}
 	if body(r, &x) != nil || strings.TrimSpace(x.ID) == "" {
 		fail(w, 400, "subscription id is required")

@@ -21,7 +21,7 @@ export function Crud({ title, subtitle, path, cols, fields, editFields, canCreat
   useEffect(() => { reload(); }, [path]);
 
   function beginCreate() { setValues({}); setEditing(false); setMessage(''); setError(''); setShow(true); }
-  function beginEdit(row: Row) { setValues({ ...row }); setEditing(true); setMessage(''); setError(''); setShow(true); }
+  function beginEdit(row: Row) { setValues({ ...row, id: row.id ?? row.ID }); setEditing(true); setMessage(''); setError(''); setShow(true); }
 
   async function save(event: FormEvent) {
     event.preventDefault(); setSaving(true); setError('');
