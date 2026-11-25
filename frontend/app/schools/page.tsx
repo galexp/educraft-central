@@ -14,6 +14,7 @@ function InvitationAction({ row }: { row: Row }) {
   const [url, setUrl] = useState('');
   const [expiresInHours, setExpiresInHours] = useState('24');
   const [copied, setCopied] = useState(false);
+  if (str(row.status) === 'active') return null;
 
   async function createInvitation() {
     setLoading(true);
