@@ -875,9 +875,27 @@ func (s *Server) updateSubscription(w http.ResponseWriter, r *http.Request) {
 		CreatedAt                    string   `json:"created_at"`
 		PlanIDs                      []string `json:"plan_ids"`
 	}
-	if body(r, &x) != nil || strings.TrimSpace(x.ID) == "" || len(x.PlanIDs) == 0 {
-		fail(w, 400, "id and at least one plan are required")
+	if body(r, &x) != nil || strings.TrimSpace(x.ID) == "" {
+		fail(w, 400, "subscription id is required")
 		return
+	}
+	if len(x.PlanIDs) == 0 {
+		rows, e := s.db.Query(r.Context(), "SELECT plan_id::text FROM subscription_plans WHERE subscription_id=$1", x.ID)
+		if e != nil {
+			fail(w, 500, "plans could not be loaded")
+			return
+		}
+		for rows.Next() {
+			var planID string
+			if rows.Scan(&planID) == nil {
+				x.PlanIDs = append(x.PlanIDs, planID)
+			}
+		}
+		rows.Close()
+		if len(x.PlanIDs) == 0 {
+			fail(w, 400, "at least one plan is required")
+			return
+		}
 	}
 	tx, e := s.db.Begin(r.Context())
 	if e != nil {
