@@ -10,11 +10,13 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS schools (
  id UUID PRIMARY KEY, name TEXT NOT NULL, code TEXT NOT NULL UNIQUE,
  contact_name TEXT NOT NULL DEFAULT '', contact_email TEXT NOT NULL DEFAULT '',
- contact_phone TEXT NOT NULL DEFAULT '', domain TEXT NOT NULL DEFAULT '',
+ contact_phone TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', website TEXT NOT NULL DEFAULT '', domain TEXT NOT NULL DEFAULT '',
  hosting TEXT NOT NULL DEFAULT 'self_hosted' CHECK(hosting IN ('self_hosted','techknights')),
  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','suspended','archived')),
  notes TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE schools ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT '';
+ALTER TABLE schools ADD COLUMN IF NOT EXISTS website TEXT NOT NULL DEFAULT '';
 CREATE TABLE IF NOT EXISTS plans (
  id UUID PRIMARY KEY, name TEXT NOT NULL UNIQUE, description TEXT NOT NULL DEFAULT '',
  amount_minor BIGINT NOT NULL CHECK(amount_minor >= 0), unit_count BIGINT NOT NULL DEFAULT 0 CHECK(unit_count >= 0), unit_amount_minor BIGINT NOT NULL DEFAULT 0 CHECK(unit_amount_minor >= 0), currency CHAR(3) NOT NULL DEFAULT 'NGN',

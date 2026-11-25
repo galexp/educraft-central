@@ -189,11 +189,15 @@ Consumption is one-time.
   "school_name": "Demo School",
   "school_code": "DEMO-116044",
   "instance_id": "inst-example",
-  "expires_at": "2026-11-23T01:15:00Z"
+  "expires_at": "2026-11-23T01:15:00Z",
+  "school_email": "office@example.com",
+  "school_contact_number": "+2348000000000",
+  "address": "Example school address",
+  "website": "https://school.example.com"
 }
 ```
 
-The response identifies the approved school by ID, name, and stable school code. It confirms the invitation expiry. The supplied `instance_id` is bound to the invitation but is not currently echoed; the client already knows the value it sent.
+The response identifies the approved school by ID, name, stable school code, and confirmed instance ID. `school_email`, `school_contact_number`, `address`, and `website` are public school profile fields. They are returned as empty strings when not configured; they are never inferred from the administrator email or instance URL, and no passwords, keys, or API tokens are included.
 
 Verify errors:
 

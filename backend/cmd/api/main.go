@@ -393,7 +393,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) list(w http.ResponseWriter, r *http.Request, kind string) {
 	queries := map[string]string{
-		"schools":          `SELECT id::text AS id,name,code,contact_name,contact_email,contact_phone,domain,hosting,status,notes,created_at FROM schools ORDER BY created_at DESC, id`,
+		"schools":          `SELECT id::text AS id,name,code,contact_name,contact_email,contact_phone,address,website,domain,hosting,status,notes,created_at FROM schools ORDER BY created_at DESC, id`,
 		"plans":            `SELECT id::text AS id,name,description,amount_minor,currency,interval,active,created_at FROM plans ORDER BY created_at DESC LIMIT 200`,
 		"subscriptions":    `SELECT s.id::text AS id,s.school_id::text AS school_id,sc.name AS school_name,sc.contact_email,COALESCE(STRING_AGG(DISTINCT p.name, ', ' ORDER BY p.name),'') AS plan_name,COALESCE(ARRAY_AGG(DISTINCT sp.plan_id::text) FILTER (WHERE sp.plan_id IS NOT NULL),'{}') AS plan_ids,ta.id::text AS activation_id,s.status,s.starts_on,s.ends_on,s.created_at FROM subscriptions s JOIN schools sc ON s.school_id=sc.id LEFT JOIN subscription_plans sp ON sp.subscription_id=s.id LEFT JOIN plans p ON p.id=sp.plan_id LEFT JOIN LATERAL (SELECT id FROM term_activations WHERE subscription_id=s.id ORDER BY created_at DESC LIMIT 1) ta ON true GROUP BY s.id,s.school_id,sc.name,sc.contact_email,ta.id ORDER BY s.created_at DESC LIMIT 200`,
 		"invoices":         `SELECT i.id::text AS id,i.invoice_no,sc.name AS school_name,i.description,i.unit_count,i.unit_amount_minor,CASE WHEN i.unit_count > 0 AND i.unit_amount_minor > 0 THEN i.unit_count*i.unit_amount_minor ELSE i.amount_minor END AS amount_minor,i.currency,i.status,i.due_on,COALESCE((SELECT SUM(amount_minor) FROM payments WHERE invoice_id=i.id),0)::bigint AS paid_minor FROM invoices i JOIN schools sc ON i.school_id=sc.id ORDER BY i.created_at DESC LIMIT 200`,
@@ -599,12 +599,12 @@ func (s *Server) verifyInvitation(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "school could not be activated")
 		return
 	}
-	var schoolName, schoolCode string
-	if e = s.db.QueryRow(r.Context(), "SELECT name,code FROM schools WHERE id=$1", schoolID).Scan(&schoolName, &schoolCode); e != nil {
+	var schoolName, schoolCode, schoolEmail, schoolPhone, address, website string
+	if e = s.db.QueryRow(r.Context(), "SELECT name,code,contact_email,contact_phone,address,website FROM schools WHERE id=$1", schoolID).Scan(&schoolName, &schoolCode, &schoolEmail, &schoolPhone, &address, &website); e != nil {
 		fail(w, 404, "school not found")
 		return
 	}
-	reply(w, 200, map[string]any{"valid": true, "invitation_id": invitationID, "school_id": schoolID, "school_name": schoolName, "school_code": schoolCode, "instance_id": x.InstanceID, "expires_at": expiresAt})
+	reply(w, 200, map[string]any{"valid": true, "invitation_id": invitationID, "school_id": schoolID, "school_name": schoolName, "school_code": schoolCode, "instance_id": x.InstanceID, "expires_at": expiresAt, "school_email": schoolEmail, "school_contact_number": schoolPhone, "address": address, "website": website})
 }
 func (s *Server) consumeInvitation(w http.ResponseWriter, r *http.Request) {
 	var x struct {
@@ -670,6 +670,8 @@ func (s *Server) createSchool(w http.ResponseWriter, r *http.Request) {
 		ContactName  string `json:"contact_name"`
 		ContactEmail string `json:"contact_email"`
 		ContactPhone string `json:"contact_phone"`
+		Address      string `json:"address"`
+		Website      string `json:"website"`
 		Domain       string `json:"domain"`
 		Hosting      string `json:"hosting"`
 		Notes        string `json:"notes"`
@@ -689,7 +691,7 @@ func (s *Server) createSchool(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(x.Code) == "" {
 		x.Code = generatedSchoolCode(x.Name, uid)
 	}
-	_, e := s.db.Exec(r.Context(), `INSERT INTO schools(id,name,code,contact_name,contact_email,contact_phone,domain,hosting,notes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, uid, x.Name, strings.ToUpper(strings.TrimSpace(x.Code)), x.ContactName, x.ContactEmail, x.ContactPhone, x.Domain, x.Hosting, x.Notes)
+	_, e := s.db.Exec(r.Context(), `INSERT INTO schools(id,name,code,contact_name,contact_email,contact_phone,address,website,domain,hosting,notes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, uid, x.Name, strings.ToUpper(strings.TrimSpace(x.Code)), x.ContactName, x.ContactEmail, x.ContactPhone, x.Address, x.Website, x.Domain, x.Hosting, x.Notes)
 	if e != nil {
 		fail(w, 409, "school code already exists or invalid data")
 		return
